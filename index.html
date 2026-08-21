@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Évaluateur de Risque Client</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .spin {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen p-4 md:p-8 flex items-center justify-center">
+
+    <div class="max-w-5xl w-full mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <div class="lg:col-span-1 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <div class="mb-6">
+                <h1 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                    Analyse Risque
+                </h1>
+                <p class="text-sm text-slate-500 mt-1">Saisissez le nom du client pour récupérer les données depuis Google Sheets.</p>
+            </div>
+
+            <form id="riskForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Nom du Client</label>
+                    <div class="relative">
+                        <input type="text" id="clientName" placeholder="Ex: Entreprise Dupont" class="w-full pl-4 pr-10 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" required>
+                        <div id="loadingSpinner" class="absolute right-3 top-2.5 hidden text-indigo-500">
+                            <svg class="w-5 h-5 spin" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-100">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Historique (3 derniers mois)</h3>
+                        <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded font-medium">Automatique</span>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="flex items-center gap-2">
+                            <label class="w-16 text-sm text-slate-600">Mois -3</label>
+                            <div class="relative flex-1">
+                                <input type="number" id="month3" value="0" readonly class="w-full pl-3 pr-8 py-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed outline-none transition-colors">
+                                <span class="absolute right-3 top-2.5 text-slate-400">€</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="w-16 text-sm text-slate-600">Mois -2</label>
+                            <div class="relative flex-1">
+                                <input type="number" id="month2" value="0" readonly class="w-full pl-3 pr-8 py-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed outline-none transition-colors">
+                                <span class="absolute right-3 top-2.5 text-slate-400">€</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="w-16 text-sm text-slate-600">Mois -1</label>
+                            <div class="relative flex-1">
+                                <input type="number" id="month1" value="0" readonly class="w-full pl-3 pr-8 py-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed outline-none transition-colors">
+                                <span class="absolute right-3 top-2.5 text-slate-400">€</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-100 space-y-4">
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="block text-sm font-medium text-slate-700">Moyenne (générée par Sheets)</label>
+                            <span class="text-[10px] bg-indigo-50 text-indigo-500 px-2 py-0.5 rounded font-medium">Automatique</span>
+                        </div>
+                        <div class="relative">
+                            <div id="avgResult" class="w-full pl-3 pr-8 py-2 border border-indigo-100 rounded-lg outline-none font-semibold text-indigo-700 bg-indigo-50/50 transition-colors flex items-center h-[42px]">
+                                0,00 €
+                            </div>
+                        </div>
+                    </div>
+                    <!-- La section Impayés a été supprimée d'ici -->
+                </div>
+            </form>
+        </div>
+
+        <div class="lg:col-span-2 space-y-6">
+            
+            <div id="statusCard" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 transition-colors duration-300">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-500 mb-1">Statut du dossier</h2>
+                        <div id="riskLevelTitle" class="text-3xl font-bold text-slate-800">En attente de données</div>
+                        <p id="riskDescription" class="text-slate-600 mt-2">Saisissez un client pour charger les données depuis Sheets.</p>
+                    </div>
+                    <div id="riskIcon" class="p-4 rounded-full bg-slate-100 text-slate-400">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div id="currentCard" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col justify-center transition-colors duration-300">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-sm font-medium text-slate-500">Montant Facture en cours</h3>
+                        <span class="text-[10px] bg-indigo-50 text-indigo-500 px-2 py-0.5 rounded font-medium">Automatique</span>
+                    </div>
+                    <div class="text-3xl font-bold text-slate-800" id="currentInvoiceDisplay">0,00 €</div>
+                    <input type="hidden" id="currentInvoice" value="0">
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col justify-center">
+                    <h3 class="text-sm font-medium text-slate-500 mb-2">Évolution (En cours vs Moyenne)</h3>
+                    <div class="flex items-baseline gap-2">
+                        <div class="text-3xl font-bold text-slate-800" id="varResult">0 %</div>
+                        <div id="varBadge" class="hidden px-2 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-600">
+                            -
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-indigo-900 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
+                <div class="absolute top-0 right-0 opacity-10">
+                    <svg class="w-48 h-48 transform translate-x-12 -translate-y-12" fill="currentColor" viewBox="0 0 20 20"><path d="M13 8V2H7v6H2l8 8 8-8h-5zM0 18h20v2H0v-2z"></path></svg>
+                </div>
+                <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-1">Partager au commercial</h3>
+                        <p class="text-indigo-200 text-sm">Générez un résumé texte prêt à être copié-collé dans un email ou sur Slack/Teams.</p>
+                    </div>
+                    <button id="copyBtn" class="whitespace-nowrap bg-white text-indigo-900 hover:bg-indigo-50 px-6 py-3 rounded-xl font-semibold transition-colors flex items-center gap-2 shadow-sm">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                        Copier le résumé
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="toast" class="fixed bottom-5 right-5 transform translate-y-20 opacity-0 transition-all duration-300 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 z-50 bg-slate-800">
+        <div id="toastIcon"></div>
+        <span id="toastMessage" class="font-medium text-sm">Action effectuée !</span>
+    </div>
+
+    <script>
+        const GOOGLE_SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbzLUYt7upqcd2v-pZV4_ZCugf8v2SEtV0YiyJc8ntQ5KAIgnf8ZB1GMQsgwwYl1Gc1-/exec";
+        
+        const clientNameInput = document.getElementById('clientName');
+        const m3Input = document.getElementById('month3');
+        const m2Input = document.getElementById('month2');
+        const m1Input = document.getElementById('month1');
+        
+        const currentInput = document.getElementById('currentInvoice'); 
+        const currentInvoiceDisplay = document.getElementById('currentInvoiceDisplay'); 
+        // Supprimé : const unpaidInput = document.getElementById('unpaid');
+        const spinner = document.getElementById('loadingSpinner');
+        
+        const avgResult = document.getElementById('avgResult');
+        const varResult = document.getElementById('varResult');
+        const varBadge = document.getElementById('varBadge');
+        const statusCard = document.getElementById('statusCard');
+        const riskLevelTitle = document.getElementById('riskLevelTitle');
+        const riskDescription = document.getElementById('riskDescription');
+        const riskIcon = document.getElementById('riskIcon');
+        
+        const copyBtn = document.getElementById('copyBtn');
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toastMessage');
+        const toastIcon = document.getElementById('toastIcon');
+
+        const currencyFormatter = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
+
+        let typingTimer;
+        // J'ai réduit l'intervalle de 1000ms (1s) à 400ms pour accélérer la recherche
+        const doneTypingInterval = 400;
+        let sheetAverage = 0;
+
+        clientNameInput.addEventListener('input', () => {
+            clearTimeout(typingTimer);
+            const clientName = clientNameInput.value.trim();
+            
+            resetAutoFields();
+            calculateRisk(); 
+            
+            if (clientName.length >= 2) {
+                typingTimer = setTimeout(() => {
+                    fetchClientData(clientName);
+                }, doneTypingInterval);
+            }
+        });
+
+        // Supprimé : unpaidInput.addEventListener('input', calculateRisk);
+
+        function resetAutoFields() {
+            m3Input.value = 0;
+            m2Input.value = 0;
+            m1Input.value = 0;
+            currentInput.value = 0;
+            sheetAverage = 0;
+        }
+
+        async function fetchClientData(name) {
+            if (!GOOGLE_SHEETS_API_URL || GOOGLE_SHEETS_API_URL === "VOTRE_URL_GOOGLE_APPS_SCRIPT_ICI") {
+                console.log("L'URL de l'API Google Sheets n'est pas configurée.");
+                return;
+            }
+
+            spinner.classList.remove('hidden');
+
+            try {
+                const response = await fetch(`${GOOGLE_SHEETS_API_URL}?clientName=${encodeURIComponent(name)}`, {
+                    redirect: "follow"
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Erreur HTTP: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.found) {
+                    highlightInputs();
+
+                    if (data.actualName) clientNameInput.value = data.actualName;
+
+                    m3Input.value = data.month3 || 0;
+                    m2Input.value = data.month2 || 0;
+                    m1Input.value = data.month1 || 0;
+                    
+                    currentInput.value = data.current || 0;
+                    sheetAverage = parseFloat(data.average) || 0; 
+                    
+                    // Supprimé : if(data.unpaid !== undefined) unpaidInput.value = data.unpaid || 0;
+                    
+                    calculateRisk();
+                    showToast(`Données de facturation chargées`, 'success');
+                } else {
+                    resetAutoFields();
+                    calculateRisk();
+                }
+            } catch (error) {
+                console.error("Détail de l'erreur de connexion à Google Sheets:", error);
+                showToast("Erreur de connexion à Sheets", 'error');
+            } finally {
+                spinner.classList.add('hidden');
+            }
+        }
+
+        function highlightInputs() {
+            const inputs = [m3Input, m2Input, m1Input];
+            inputs.forEach(input => {
+                input.classList.add('bg-indigo-50');
+                setTimeout(() => input.classList.remove('bg-indigo-50'), 600);
+            });
+            
+            const currentCard = document.getElementById('currentCard');
+            if (currentCard) {
+                currentCard.classList.add('bg-indigo-50');
+                setTimeout(() => currentCard.classList.remove('bg-indigo-50'), 600);
+            }
+            
+            if (avgResult) {
+                avgResult.classList.add('bg-indigo-100');
+                setTimeout(() => avgResult.classList.remove('bg-indigo-100'), 600);
+            }
+        }
+
+        function calculateRisk() {
+            const current = parseFloat(currentInput.value) || 0;
+            // Supprimé : const unpaid = parseFloat(unpaidInput.value) || 0;
+            const clientName = clientNameInput.value.trim() || 'Client';
+
+            const average = sheetAverage;
+            
+            let evolutionRatio = 0;
+            
+            // Nouvelle Formule : (Facture en cours / Moyenne) * 100
+            if (average > 0) {
+                evolutionRatio = (current / average) * 100;
+            } else if (current > 0 && average === 0) {
+                evolutionRatio = Infinity;
+            }
+
+            avgResult.textContent = currencyFormatter.format(average);
+            if (currentInvoiceDisplay) {
+                currentInvoiceDisplay.textContent = currencyFormatter.format(current);
+            }
+            
+            if (evolutionRatio === Infinity) {
+                varResult.textContent = "Nouveau / Reprise";
+                varBadge.classList.add('hidden');
+            } else {
+                varResult.textContent = `${evolutionRatio.toFixed(1)} %`;
+                if(current === 0 && average === 0) varResult.textContent = "0 %";
+                
+                varBadge.classList.remove('hidden');
+                varBadge.className = 'px-2 py-1 text-xs font-semibold rounded-full flex items-center gap-1';
+                
+                if (evolutionRatio <= 50) {
+                    varBadge.classList.add('bg-emerald-100', 'text-emerald-700');
+                    varBadge.innerHTML = `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Validé`;
+                } else {
+                    varBadge.classList.add('bg-red-100', 'text-red-700');
+                    varBadge.innerHTML = `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg> À valider`;
+                }
+            }
+
+            let riskLevel = 'green';
+            let title = 'Facturation Valide';
+            let desc = `L'activité de ${clientName} semble normale par rapport à l'historique Sheets. Facture validée.`;
+            let iconSvg = `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+
+            // Logique de risque mise à jour sans les impayés
+            if (evolutionRatio === Infinity && current > 0) {
+                riskLevel = 'orange';
+                title = 'Vigilance : Premier historique';
+                desc = `${clientName} n'a pas d'historique Sheets sur les 3 derniers mois. Validation requise.`;
+                iconSvg = `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            } else if (evolutionRatio > 50) {
+                // Règle si le résultat est supérieur à 50 %
+                riskLevel = 'red';
+                title = 'Alerte : Remonter l’information au commercial';
+                desc = `Le résultat de l'évolution est de ${evolutionRatio.toFixed(0)}% (supérieur à 50%). Basculement au comptant à valider avec le commercial.`;
+                iconSvg = `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+            }
+
+            statusCard.className = 'bg-white rounded-2xl shadow-sm border p-8 transition-colors duration-300';
+            riskIcon.className = 'p-4 rounded-full';
+            
+            // Condition de mise à jour pour état vide sans impayés
+            if (current === 0 && average === 0) {
+                statusCard.classList.add('border-slate-200');
+                riskLevelTitle.className = 'text-3xl font-bold text-slate-800';
+                riskLevelTitle.textContent = 'En attente de données';
+                riskDescription.textContent = "Saisissez un client pour charger les données depuis Sheets.";
+                riskIcon.classList.add('bg-slate-100', 'text-slate-400');
+                riskIcon.innerHTML = `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+                return;
+            }
+
+            riskLevelTitle.textContent = title;
+            riskDescription.textContent = desc;
+            riskIcon.innerHTML = iconSvg;
+
+            if (riskLevel === 'green') {
+                statusCard.classList.add('border-emerald-200', 'bg-emerald-50/30');
+                riskLevelTitle.className = 'text-3xl font-bold text-emerald-800';
+                riskIcon.classList.add('bg-emerald-100', 'text-emerald-600');
+            } else if (riskLevel === 'orange') {
+                statusCard.classList.add('border-amber-200', 'bg-amber-50/30');
+                riskLevelTitle.className = 'text-3xl font-bold text-amber-800';
+                riskIcon.classList.add('bg-amber-100', 'text-amber-600');
+            } else if (riskLevel === 'red') {
+                statusCard.classList.add('border-red-200', 'bg-red-50/30');
+                riskLevelTitle.className = 'text-3xl font-bold text-red-800';
+                riskIcon.classList.add('bg-red-100', 'text-red-600');
+            }
+            
+            statusCard.classList.remove('fade-in');
+            void statusCard.offsetWidth;
+            statusCard.classList.add('fade-in');
+        }
+
+        function showToast(message, type = 'success') {
+            toastMessage.textContent = message;
+            
+            if (type === 'success') {
+                toastIcon.innerHTML = `<svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+            } else if (type === 'error') {
+                toastIcon.innerHTML = `<svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            } else {
+                toastIcon.innerHTML = `<svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        copyBtn.addEventListener('click', () => {
+            const clientName = clientNameInput.value.trim() || 'Client inconnu';
+            const current = parseFloat(currentInput.value) || 0;
+            const avg = avgResult.textContent;
+            const status = riskLevelTitle.textContent;
+            const desc = riskDescription.textContent;
+            
+            let report = `📊 EVALUATION RISQUE : ${clientName}\n`;
+            report += `----------------------------------------\n`;
+            report += `📌 Statut : ${status}\n`;
+            report += `📝 Action requise : ${desc}\n\n`;
+            report += `Données financières (Issues de Sheets) :\n`;
+            report += `- Facture en cours : ${currencyFormatter.format(current)}\n`;
+            report += `- Moyenne 3 derniers mois : ${avg}\n`;
+            
+            const variation = varResult.textContent;
+            if (variation !== 'Nouveau / Reprise' && variation !== '0 %') {
+                report += `- Évolution : ${variation}\n`;
+            }
+
+            // Supprimé : section impayés du résumé
+            
+            report += `----------------------------------------\n`;
+            report += `Généré via l'outil d'évaluation de risque.`;
+
+            try {
+                const textArea = document.createElement("textarea");
+                textArea.value = report;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand("copy");
+                document.body.removeChild(textArea);
+                
+                showToast("Résumé copié dans le presse-papier !", 'success');
+            } catch (err) {
+                console.error('Erreur lors de la copie', err);
+                showToast("Erreur lors de la copie", 'error');
+            }
+        });
+
+        calculateRisk();
+    </script>
+</body>
+</html>
